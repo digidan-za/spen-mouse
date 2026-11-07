@@ -26,3 +26,20 @@ Tested on the laptop: motion works, the circle shows up on screen. The click pat
   API surface from `javap`: `SpenRemote.getInstance().connect(ctx, cb)` hands back a `SpenUnitManager`;
   `getUnit(SpenUnit.TYPE_AIR_MOTION)` / `TYPE_BUTTON`, then `registerSpenEventListener(listener, unit)`.
   Events arrive as `SpenEvent`; wrap with `AirMotionEvent(e).getDeltaX()/getDeltaY()` or `ButtonEvent(e).getAction()`.
+
+Android forwarder written and building (`android/app/src/main/java/com/digidan/spenmouse/MainActivity.kt`, 92 lines).
+Not yet run on the phone. Android Studio "Rabbit 2" generated the project with AGP 9.5 / compileSdk 37; AGP 9 has
+Kotlin built in, so there is no separate kotlin-android plugin in the build file.
+
+- Things the SDK getting-started page doesn't tell you, found with `javap -c` on `SpenRemote`:
+  the manifest needs `<uses-permission android:name="com.samsung.android.sdk.penremote.BIND_SPEN_REMOTE"/>`
+  (the SDK logs "Add ... BIND_SPEN_REMOTE permission" and fails to bind without it), `connect()` insists on an
+  Activity context, and it binds to `com.samsung.android.service.aircommand`, so on Android 11+ the app also needs
+  a `<queries><package .../></queries>` entry or the bind silently fails. Failure codes: `SpenRemote.Error.UNSUPPORTED_DEVICE`,
+  `CONNECTION_FAILED`, `UNKNOWN`.
+- "It was sure and wrong" #2 (mine): dropped the Material library to keep the dependency list short, forgot the
+  generated theme inherits from `Theme.Material3`. First Gradle build took 8m44s to download everything and then
+  failed at resource linking. Theme now inherits from `Theme.AppCompat.DayNight.NoActionBar`.
+- Sign of `deltaY` is unverified. If the cursor moves the wrong way vertically, flip it on the laptop side.
+- The Activity sets `FLAG_KEEP_SCREEN_ON`: when the phone screen sleeps the Activity pauses and the listeners
+  are unregistered, which would look like the pen "randomly stopping".

@@ -4,7 +4,7 @@ An air mouse for Windows, powered by the Galaxy S Pen. Hold the button, wave the
 
 Inspired by [AirPointer](https://github.com/musubipapi/airpointer), which did this with a closed AirPods case and a lot of reverse engineering. The S Pen version is easier: Samsung publishes an [SDK](https://developer.samsung.com/s-pen-sdk) that streams the pen's motion to the phone.
 
-Status: Windows receiver works (tested with a fake sender). Android app not started. See `NOTES.md` for the build log.
+Status: Windows receiver works (tested with a fake sender). Android app builds, not yet tried on the phone. See `NOTES.md` for the build log.
 
 ## Windows receiver
 
@@ -13,3 +13,14 @@ Status: Windows receiver works (tested with a fake sender). Android app not star
     dotnet run -- 60 0.3  # more gain, less lag
 
 In another terminal, `.ake-pen.ps1` sends a circle and a click to prove the pipe works before the phone is involved.
+
+## Android forwarder
+
+Needs the [S Pen Remote SDK](https://developer.samsung.com/galaxy-spen-remote/s-pen-remote-sdk.html)
+(free Samsung developer login). Unzip it and copy `spenremote-v1.0.1.jar` and `sdk-v1.0.0.jar` into
+`android/app/libs/`. They are git-ignored. Then open `android/` in Android Studio, or:
+
+    cd android
+    ./gradlew installDebug
+
+Type the laptop's IP into the box, hold the pen button, wave. The phone and laptop must be on the same Wi-Fi.
