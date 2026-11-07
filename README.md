@@ -4,7 +4,7 @@ An air mouse for Windows, powered by the Galaxy S Pen. Hold the button, wave the
 
 Inspired by [AirPointer](https://github.com/musubipapi/airpointer), which did this with a closed AirPods case and a lot of reverse engineering. The S Pen version is easier: Samsung publishes an [SDK](https://developer.samsung.com/s-pen-sdk) that streams the pen's motion to the phone.
 
-Status: Windows receiver works (tested with a fake sender). Android app builds, not yet tried on the phone. See `NOTES.md` for the build log.
+Status: works. Hold the pen button to move, tap it to click, release it to reposition your arm (the cursor stays put, like lifting a mouse). See `NOTES.md` for the build log.
 
 ## Windows receiver
 

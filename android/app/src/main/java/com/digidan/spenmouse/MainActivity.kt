@@ -2,6 +2,8 @@ package com.digidan.spenmouse
 
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.WindowManager
 import android.widget.EditText
@@ -33,6 +35,21 @@ class MainActivity : AppCompatActivity() {
     private var units: SpenUnitManager? = null
     private lateinit var status: TextView
     private var sent = 0
+    @Volatile private var lastEvent = 0L
+    private val ui = Handler(Looper.getMainLooper())
+    private val IdleMs = 8000L   // after this long with the button up, stop the gyro stream (re-arming costs ~1 s)
+    private var motionOn = false
+    private val motionOff = Runnable { motion(false) }
+    private val ticker = object : Runnable {   // honest status: the SDK binding stays "connected" even when the pen's radio has gone to sleep
+        override fun run() {
+            if (lastEvent > 0) {
+                val age = (System.currentTimeMillis() - lastEvent) / 1000
+                val hint = "Pen gone quiet? Press its button once. Still dead: dock it and pull it out again."
+                status.text = "$sent packets sent. Last pen event ${age}s ago." + (if (age > 5) " $hint" else "")
+            }
+            ui.postDelayed(this, 1000)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,6 +67,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        ui.post(ticker)
         val remote = SpenRemote.getInstance()
         if (!remote.isFeatureEnabled(SpenRemote.FEATURE_TYPE_AIR_MOTION)) {
             show("This phone's S Pen has no air motion"); return
@@ -58,24 +76,38 @@ class MainActivity : AppCompatActivity() {
             override fun onSuccess(manager: SpenUnitManager) {
                 units = manager
                 manager.registerSpenEventListener(SpenEventListener { e ->
-                    val m = AirMotionEvent(e)
-                    send(String.format(Locale.US, "M %.4f %.4f", m.deltaX, m.deltaY))   // Locale.US: no decimal commas
-                }, manager.getUnit(SpenUnit.TYPE_AIR_MOTION))
-                manager.registerSpenEventListener(SpenEventListener { e ->
-                    send(if (ButtonEvent(e).action == ButtonEvent.ACTION_DOWN) "B down" else "B up")
+                    val down = ButtonEvent(e).action == ButtonEvent.ACTION_DOWN
+                    lastEvent = System.currentTimeMillis(); Log.d("spen-mouse", if (down) "button down" else "button up")
+                    ui.removeCallbacks(motionOff)
+                    if (down) ui.post { motion(true) } else ui.postDelayed(motionOff, IdleMs)
+                    send(if (down) "B down" else "B up")
                 }, manager.getUnit(SpenUnit.TYPE_BUTTON))
+                motion(true); ui.postDelayed(motionOff, IdleMs)
                 show("Pen connected. Hold the button and wave; tap it to click.")
             }
             override fun onFailure(code: Int) = show("Pen connect failed, code $code")
         })
     }
 
+    // Registering for air motion puts the pen's gyro in "always on" mode (Samsung logs it as SENSOR_ON) and the pen
+    // hangs up after a minute or two, drained. So only listen while the button is in use, plus IdleMs of grace.
+    private fun motion(on: Boolean) {
+        val m = units ?: return
+        if (on == motionOn) return
+        motionOn = on
+        if (on) m.registerSpenEventListener(SpenEventListener { e ->
+            val a = AirMotionEvent(e); lastEvent = System.currentTimeMillis()
+            send(String.format(Locale.US, "M %.4f %.4f", a.deltaX, a.deltaY))   // Locale.US: no decimal commas
+        }, m.getUnit(SpenUnit.TYPE_AIR_MOTION))
+        else m.unregisterSpenEventListener(m.getUnit(SpenUnit.TYPE_AIR_MOTION))
+        Log.d("spen-mouse", "air motion ${if (on) "on" else "off"}")
+    }
+
     override fun onPause() {
         super.onPause()
-        units?.let {   // air motion drains the pen's battery, so stop listening when not in front
-            it.unregisterSpenEventListener(it.getUnit(SpenUnit.TYPE_AIR_MOTION))
-            it.unregisterSpenEventListener(it.getUnit(SpenUnit.TYPE_BUTTON))
-        }
+        ui.removeCallbacks(ticker); ui.removeCallbacks(motionOff)
+        motion(false)
+        units?.unregisterSpenEventListener(units?.getUnit(SpenUnit.TYPE_BUTTON))
         units = null
         SpenRemote.getInstance().let { if (it.isConnected) it.disconnect(this) }
     }
@@ -89,7 +121,7 @@ class MainActivity : AppCompatActivity() {
         val bytes = line.toByteArray()
         runCatching { socket.send(DatagramPacket(bytes, bytes.size, t, port)) }
             .onFailure { Log.w("spen-mouse", "send failed", it) }
-        if (++sent % 100 == 0) show("Pen connected. $sent packets sent to ${t.hostAddress}")
+        sent++
     }
 
     private fun show(text: String) = runOnUiThread { status.text = text; Log.i("spen-mouse", text) }

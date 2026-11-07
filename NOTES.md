@@ -57,3 +57,23 @@ First phone test. Two problems, neither in the code:
 Tuning, round 1. Y was inverted (pen up = +deltaY, screen up = -y), fixed in the receiver. Gain 40 moved the
 cursor about 3 cm for a full left-to-right arm sweep, so the "-1..1" deltas are tiny in practice. Gain now 400.
 Clicks felt fine at the 250 ms threshold.
+
+## It works. Then it stops. (14:00-14:17)
+Hands-on: speed at gain 400 "almost perfect", clicks fine. Two complaints:
+- "Hard to align the cursor with the pen." That's the clutch: motion is relative, like a mouse. Release the
+  button, move your arm, press again. The cursor stays put while the button is up. Holding the button the
+  whole time and flicking to the screen edge works too, but that's the hard way.
+- "Works for a minute, then stops, and only docking the pen fixes it. Status still says Pen connected."
+  Pulled Samsung's own Air Command service logs (`adb logcat`, tag `[AirCmd]`). Every pen session ended with
+  `REMOTE_DISCONNECT ... GATT:19` (the pen hung up) after 57 s, 65 s, 116 s, once mid-button-press. Pen battery
+  read 100 at the start of one of them. The tell: when a third-party app registers for air motion, the
+  service switches the pen to `SENSOR_ON`, a mode its own code calls `motionSensorAlwaysOn`. Samsung's own
+  Air actions stream the gyro only while the button is held; the SDK streams it continuously, and the pen's
+  supercapacitor doesn't last. A few seconds in the dock recharges it, which is why docking "fixed" it.
+  Fix: register the air-motion listener on button-down and unregister it 8 s after button-up (the button
+  listener stays). Re-arming costs about 1 s (the service logs SENSOR_ON taking 800-1000 ms to apply), which
+  only bites after a pause. The status line now shows the age of the last pen event, since "Pen connected"
+  only ever meant "bound to Samsung's service".
+- "Sure and wrong" #4: I first blamed a flat pen, then a Samsung standby timer. The logs said neither.
+  Not yet proven: that unregistering only the motion listener flips the mode back to DEFAULT. Check the
+  AirCmd log for `setSpenOperationMode DEFAULT` about 8 s after a button release.
