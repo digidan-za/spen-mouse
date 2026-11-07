@@ -77,3 +77,10 @@ Hands-on: speed at gain 400 "almost perfect", clicks fine. Two complaints:
 - "Sure and wrong" #4: I first blamed a flat pen, then a Samsung standby timer. The logs said neither.
   Not yet proven: that unregistering only the motion listener flips the mode back to DEFAULT. Check the
   AirCmd log for `setSpenOperationMode DEFAULT` about 8 s after a button release.
+
+Result of the on-demand gyro fix: 48 minutes of use (14:17-15:05), zero pen hangups. Before it, one every
+one to two minutes. The AirCmd log shows the mode flipping SENSOR_ON / DEFAULT with every press and release,
+about 60 ms each way. Note the sloppy-looking measurement: "went dead again" turned out to be the pen being
+docked at 14:59:58, which makes Samsung's service reset the mode; the app's motion registration was then stale
+and delivered nothing. Fix: on button-down, if motion is registered but nothing has arrived for IdleMs, drop
+and re-register. Untested on the phone at the time of writing.

@@ -36,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var status: TextView
     private var sent = 0
     @Volatile private var lastEvent = 0L
+    @Volatile private var lastMotion = 0L
     private val ui = Handler(Looper.getMainLooper())
     private val IdleMs = 8000L   // after this long with the button up, stop the gyro stream (re-arming costs ~1 s)
     private var motionOn = false
@@ -79,7 +80,9 @@ class MainActivity : AppCompatActivity() {
                     val down = ButtonEvent(e).action == ButtonEvent.ACTION_DOWN
                     lastEvent = System.currentTimeMillis(); Log.d("spen-mouse", if (down) "button down" else "button up")
                     ui.removeCallbacks(motionOff)
-                    if (down) ui.post { motion(true) } else ui.postDelayed(motionOff, IdleMs)
+                    // Docking the pen resets its mode under us; a stale registration then delivers nothing. Re-arm if quiet.
+                    if (down) ui.post { if (motionOn && System.currentTimeMillis() - lastMotion > IdleMs) motion(false); motion(true) }
+                    else ui.postDelayed(motionOff, IdleMs)
                     send(if (down) "B down" else "B up")
                 }, manager.getUnit(SpenUnit.TYPE_BUTTON))
                 motion(true); ui.postDelayed(motionOff, IdleMs)
@@ -96,7 +99,7 @@ class MainActivity : AppCompatActivity() {
         if (on == motionOn) return
         motionOn = on
         if (on) m.registerSpenEventListener(SpenEventListener { e ->
-            val a = AirMotionEvent(e); lastEvent = System.currentTimeMillis()
+            val a = AirMotionEvent(e); lastEvent = System.currentTimeMillis(); lastMotion = lastEvent
             send(String.format(Locale.US, "M %.4f %.4f", a.deltaX, a.deltaY))   // Locale.US: no decimal commas
         }, m.getUnit(SpenUnit.TYPE_AIR_MOTION))
         else m.unregisterSpenEventListener(m.getUnit(SpenUnit.TYPE_AIR_MOTION))
