@@ -43,3 +43,13 @@ Kotlin built in, so there is no separate kotlin-android plugin in the build file
 - Sign of `deltaY` is unverified. If the cursor moves the wrong way vertically, flip it on the laptop side.
 - The Activity sets `FLAG_KEEP_SCREEN_ON`: when the phone screen sleeps the Activity pauses and the listeners
   are unregistered, which would look like the pen "randomly stopping".
+
+First phone test. Two problems, neither in the code:
+1. The phone was on the home Wi-Fi and the laptop on a phone hotspot. Fix: same network. The app's status
+   line said "N packets to 10.166.169.85" and looked healthy; UDP has no way of knowing nobody is listening.
+2. Then every send failed with `sendto failed: EPERM`. `run-as` the app's uid could reach 8.8.8.8 but not the
+   laptop, and `appops get` showed `ACCESS_LOCAL_NETWORK: ignore`. The S23 Ultra is on Android 17 (One UI 9)
+   and the project targets SDK 37, so Android's local network protection applies: an app needs the runtime
+   permission `android.permission.ACCESS_LOCAL_NETWORK` to talk to anything on the LAN. Not in any S Pen doc,
+   not something Android Studio's template mentions. Found with `adb shell appops get <pkg>`.
+   "Sure and wrong" #3: I assumed Windows Firewall first; the rules were already there from the first run.

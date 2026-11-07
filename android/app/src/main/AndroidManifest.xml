@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Android 16+ local network protection: without this runtime permission, sends to LAN addresses fail with EPERM. -->
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
     <!-- The SDK checks for this at connect() and logs "Add ... BIND_SPEN_REMOTE permission" if missing. -->
     <uses-permission android:name="com.samsung.android.sdk.penremote.BIND_SPEN_REMOTE" />
     <!-- Android 11+ package visibility: the SDK binds to a service in this package. -->
