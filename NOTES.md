@@ -53,3 +53,7 @@ First phone test. Two problems, neither in the code:
    permission `android.permission.ACCESS_LOCAL_NETWORK` to talk to anything on the LAN. Not in any S Pen doc,
    not something Android Studio's template mentions. Found with `adb shell appops get <pkg>`.
    "Sure and wrong" #3: I assumed Windows Firewall first; the rules were already there from the first run.
+
+Tuning, round 1. Y was inverted (pen up = +deltaY, screen up = -y), fixed in the receiver. Gain 40 moved the
+cursor about 3 cm for a full left-to-right arm sweep, so the "-1..1" deltas are tiny in practice. Gain now 400.
+Clicks felt fine at the 250 ms threshold.

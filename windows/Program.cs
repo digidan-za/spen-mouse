@@ -9,7 +9,7 @@ using System.Text;
 
 const int Port = 51516;
 const int ClickMs = 250;              // button held shorter than this = click
-double gain = args.Length > 0 ? double.Parse(args[0], CultureInfo.InvariantCulture) : 40;   // px per unit of delta
+double gain = args.Length > 0 ? double.Parse(args[0], CultureInfo.InvariantCulture) : 400;  // px per unit of delta; a full arm sweep is only ~0.1 units
 double smooth = args.Length > 1 ? double.Parse(args[1], CultureInfo.InvariantCulture) : 0.5; // 0 = raw, 0.9 = very laggy
 var ci = CultureInfo.InvariantCulture;
 
@@ -35,7 +35,7 @@ while (true)
             && double.TryParse(p[2], NumberStyles.Float, ci, out var dy))
         {
             fx = smooth * fx + (1 - smooth) * dx;
-            fy = smooth * fy + (1 - smooth) * dy;
+            fy = smooth * fy + (1 - smooth) * -dy;   // pen up is +dy, screen up is -y
             rx += fx * gain; ry += fy * gain;
             int ix = (int)rx, iy = (int)ry;   // truncate toward zero, keep the fraction
             rx -= ix; ry -= iy;
