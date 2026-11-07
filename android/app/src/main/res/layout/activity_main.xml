@@ -7,10 +7,25 @@
     android:padding="24dp">
 
     <TextView
-        android:layout_width="wrap_content"
+        android:id="@+id/found"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Laptop IP (run SpenMouse.exe there, same Wi-Fi)"
+        android:text="Looking for a laptop running spen-mouse on this Wi-Fi…"
         android:textSize="16sp" />
+
+    <ListView
+        android:id="@+id/laptops"
+        android:layout_width="match_parent"
+        android:layout_height="150dp"
+        android:layout_marginTop="8dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Laptop address (filled in when one is found, or type it):"
+        android:textColor="?android:attr/textColorSecondary"
+        android:textSize="14sp" />
 
     <EditText
         android:id="@+id/ip"
@@ -18,7 +33,7 @@
         android:layout_height="wrap_content"
         android:hint="192.168.1.20"
         android:inputType="text"
-        android:textSize="24sp" />
+        android:textSize="22sp" />
 
     <TextView
         android:id="@+id/status"

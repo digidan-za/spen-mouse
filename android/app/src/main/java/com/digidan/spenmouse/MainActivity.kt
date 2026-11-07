@@ -1,12 +1,15 @@
 package com.digidan.spenmouse
 
 import android.content.pm.PackageManager
+import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.WindowManager
+import android.widget.ArrayAdapter
 import android.widget.EditText
+import android.widget.ListView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.widget.doAfterTextChanged
@@ -18,7 +21,11 @@ import com.samsung.android.sdk.penremote.SpenUnit
 import com.samsung.android.sdk.penremote.SpenUnitManager
 import java.net.DatagramPacket
 import java.net.DatagramSocket
+import java.net.Inet4Address
 import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.net.NetworkInterface
+import java.nio.ByteBuffer
 import java.util.Locale
 import java.util.concurrent.Executors
 
@@ -43,32 +50,101 @@ class MainActivity : AppCompatActivity() {
     private val motionOff = Runnable { motion(false) }
     private val ticker = object : Runnable {   // honest status: the SDK binding stays "connected" even when the pen's radio has gone to sleep
         override fun run() {
+            val now = System.currentTimeMillis()
             if (lastEvent > 0) {
-                val age = (System.currentTimeMillis() - lastEvent) / 1000
+                val age = (now - lastEvent) / 1000
                 val hint = "Pen gone quiet? Press its button once. Still dead: dock it and pull it out again."
                 status.text = "$sent packets sent. Last pen event ${age}s ago." + (if (age > 5) " $hint" else "")
             }
+            if (laptops.values.removeAll { now - it.second > 5000 }) showLaptops()   // beacon stopped: laptop went away
             ui.postDelayed(this, 1000)
         }
     }
+
+    // Discovery: the receiver shouts "SPENMOUSE <port> <name>" to the LAN once a second on 51517. ip -> (name, last heard)
+    private val laptops = linkedMapOf<String, Pair<String, Long>>()
+    private lateinit var ip: EditText
+    private lateinit var found: TextView
+    private lateinit var listAdapter: ArrayAdapter<String>
+    private var discovery: DatagramSocket? = null
+    private var multicast: WifiManager.MulticastLock? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)   // screen off = onPause = pen released
-        status = findViewById(R.id.status)
-        val ip = findViewById<EditText>(R.id.ip)
+        status = findViewById(R.id.status); found = findViewById(R.id.found); ip = findViewById(R.id.ip)
         val prefs = getPreferences(MODE_PRIVATE)
         ip.setText(prefs.getString("ip", ""))
         setTarget(ip.text.toString())
         ip.doAfterTextChanged { prefs.edit().putString("ip", it.toString()).apply(); setTarget(it.toString()) }
+        listAdapter = ArrayAdapter(this, android.R.layout.simple_list_item_1)
+        findViewById<ListView>(R.id.laptops).let { l ->
+            l.adapter = listAdapter
+            l.setOnItemClickListener { _, _, i, _ -> ip.setText(laptops.keys.elementAt(i)) }
+        }
         // Android 16+ (local network protection): talking to a LAN address needs this runtime permission.
         if (checkSelfPermission(LOCAL_NET) != PackageManager.PERMISSION_GRANTED) requestPermissions(arrayOf(LOCAL_NET), 1)
+    }
+
+    private fun listenForLaptops() = Thread {
+        val sock = DatagramSocket(null).apply { reuseAddress = true; broadcast = true; soTimeout = 1000; bind(InetSocketAddress(51517)) }
+        discovery = sock
+        val buf = ByteArray(256)
+        while (!sock.isClosed) {
+            val p = DatagramPacket(buf, buf.size)
+            try { sock.receive(p) } catch (e: Exception) { continue }   // timeout, or closed from onPause
+            val parts = String(p.data, 0, p.length).trim().split(" ", limit = 3)
+            val from = p.address.hostAddress ?: continue
+            if (parts.size == 3 && parts[0] == "SPENMOUSE") ui.post {
+                val new = from !in laptops
+                laptops[from] = parts[2] to System.currentTimeMillis()
+                if (new) showLaptops()
+                // Only one laptop on this Wi-Fi and the saved address is not it (typically a stale one): just use it.
+                if (new && laptops.size == 1 && ip.text.toString().trim() !in laptops) ip.setText(from)
+            }
+        }
+    }.apply { isDaemon = true; start() }
+
+    // Some Wi-Fi (hotspots, office networks) drops broadcast. So also ask: "SPENMOUSE?" to the broadcast addresses and,
+    // on a subnet of 256 hosts or fewer, to every host directly. The receiver answers with its beacon line.
+    private val prober = object : Runnable {
+        override fun run() {
+            discovery?.let { sock -> net.execute {
+                val msg = "SPENMOUSE?".toByteArray()
+                for (t in probeTargets()) runCatching { sock.send(DatagramPacket(msg, msg.size, t, port)) }
+            } }
+            ui.postDelayed(this, 4000)
+        }
+    }
+
+    private fun probeTargets(): List<InetAddress> = runCatching {
+        val out = mutableListOf(InetAddress.getByName("255.255.255.255"))
+        for (nic in NetworkInterface.getNetworkInterfaces()) for (ia in nic.interfaceAddresses) {
+            val a = ia.address as? Inet4Address ?: continue
+            if (a.isLoopbackAddress) continue
+            ia.broadcast?.let { out += it }
+            val bits = 32 - ia.networkPrefixLength
+            if (bits in 1..8) {
+                val base = ByteBuffer.wrap(a.address).int and (-1 shl bits)
+                for (h in 1 until (1 shl bits) - 1) out += InetAddress.getByAddress(ByteBuffer.allocate(4).putInt(base or h).array())
+            }
+        }
+        out
+    }.getOrDefault(emptyList())
+
+    private fun showLaptops() {
+        listAdapter.clear()
+        listAdapter.addAll(laptops.map { "${it.value.first}   ${it.key}" })
+        found.text = if (laptops.isEmpty()) "Looking for a laptop running spen-mouse on this Wi-Fi…" else "Tap your laptop:"
     }
 
     override fun onResume() {
         super.onResume()
         ui.post(ticker)
+        showLaptops()
+        multicast = (applicationContext.getSystemService(WIFI_SERVICE) as WifiManager).createMulticastLock("spen-mouse").also { it.acquire() }
+        listenForLaptops(); ui.post(prober)
         val remote = SpenRemote.getInstance()
         if (!remote.isFeatureEnabled(SpenRemote.FEATURE_TYPE_AIR_MOTION)) {
             show("This phone's S Pen has no air motion"); return
@@ -108,7 +184,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        ui.removeCallbacks(ticker); ui.removeCallbacks(motionOff)
+        ui.removeCallbacks(ticker); ui.removeCallbacks(motionOff); ui.removeCallbacks(prober)
+        discovery?.close(); discovery = null
+        multicast?.release(); multicast = null
         motion(false)
         units?.unregisterSpenEventListener(units?.getUnit(SpenUnit.TYPE_BUTTON))
         units = null

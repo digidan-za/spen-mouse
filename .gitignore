@@ -23,3 +23,10 @@ media/raw/
 
 # Local working notes
 CLAUDE.md
+
+# Release signing key: never commit
+android/keystore/
+android/keystore.properties
+
+# dotnet publish output: goes to GitHub Releases, not git
+windows/publish/

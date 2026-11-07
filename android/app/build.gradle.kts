@@ -1,3 +1,10 @@
+import java.util.Properties
+
+// Release signing: android/keystore.properties + the .jks it names, both git-ignored. Without them you still get a debug build.
+val keystoreProps = Properties().apply {
+    rootProject.file("keystore.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+
 plugins {
     alias(libs.plugins.android.application)
 }
@@ -12,12 +19,21 @@ android {
         applicationId = "com.digidan.spenmouse"
         minSdk = 29
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "0.2.0"
     }
 
+    signingConfigs {
+        if (keystoreProps.isNotEmpty()) create("release") {
+            storeFile = rootProject.file(keystoreProps["storeFile"] as String)
+            storePassword = keystoreProps["storePassword"] as String
+            keyAlias = keystoreProps["keyAlias"] as String
+            keyPassword = keystoreProps["keyPassword"] as String
+        }
+    }
     buildTypes {
         release {
+            signingConfig = signingConfigs.findByName("release")
             optimization {
                 enable = true
                 packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")

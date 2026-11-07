@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
     <!-- Android 16+ local network protection: without this runtime permission, sends to LAN addresses fail with EPERM. -->
     <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
     <!-- The SDK checks for this at connect() and logs "Add ... BIND_SPEN_REMOTE permission" if missing. -->
@@ -24,7 +25,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:windowSoftInputMode="adjustResize">
+            android:windowSoftInputMode="stateHidden|adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

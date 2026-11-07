@@ -84,3 +84,23 @@ about 60 ms each way. Note the sloppy-looking measurement: "went dead again" tur
 docked at 14:59:58, which makes Samsung's service reset the mode; the app's motion registration was then stale
 and delivered nothing. Fix: on button-down, if motion is registered but nothing has arrived for IdleMs, drop
 and re-register. Untested on the phone at the time of writing.
+
+## Round two: usable by someone who is not a developer (16:00-16:30)
+Danyal: "no Play Store, no code-signing certificate, but make it usable". So: a tray app, discovery, and
+downloadable builds on GitHub Releases.
+- Windows receiver is now a WinForms tray app (Program.cs, Receiver.cs, MainForm.cs, Settings.cs, ~330 lines).
+  Laptop name and address in big type, a live dot that goes green when packets arrive, speed and smoothing
+  sliders, flip-Y, start with Windows (HKCU Run key). `dotnet publish` gives one self-contained 68 MB exe.
+- Discovery: the receiver broadcasts `SPENMOUSE 51516 <name>` once a second on 51517 and also answers a
+  `SPENMOUSE?` probe sent to the data port. The phone listens, probes the broadcast addresses and, on a /24,
+  every host directly (some Wi-Fi drops broadcast). First laptop found fills the address box; more than one,
+  tap to choose.
+- On the HONOR phone hotspot discovery cannot work at all: the laptop cannot even ARP the phone (ping says
+  "destination host unreachable", no ARP entry), while phone-to-laptop traffic passes. One-way client
+  isolation. On the home Wi-Fi the laptop showed up on the phone within two seconds.
+- Port 51517 was already taken on the laptop by MSI Center. Irrelevant (the phone is the listener), but it
+  cost ten minutes of "why is my test listener failing".
+- The phone app opened with the keyboard up because the address box grabbed focus. `stateHidden`.
+- The receiver listed a WSL virtual adapter (172.22.176.1) as an alternative address. Filtered to Wi-Fi and
+  Ethernet, excluding vEthernet and anything described as Virtual.
+- Release APK signed with a local keystore, git-ignored. Debug builds still work for anyone who forks.
