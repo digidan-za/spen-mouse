@@ -16,11 +16,11 @@ Tested on the laptop: motion works, the circle shows up on screen. The click pat
   receiver parses with the invariant culture, so every line was rejected. The receiver was right to be strict.
   Fixed the sender with `[string]::Format(InvariantCulture, ...)`. Watch for the same on Android:
   Kotlin's `String.format` uses the default locale too, so pass `Locale.US` or the phone will send commas.
-- CLAUDE.md said ".NET 8 SDK". The laptop only has the .NET 11 RC SDK installed, with .NET 8 runtimes next
+- The plan said ".NET 8 SDK". The laptop only has the .NET 11 RC SDK installed, with .NET 8 runtimes next
   to it. The 11 SDK builds a net8.0 target fine, so it didn't matter, but `dotnet --version` alone would have
   said "wrong SDK".
 
-- Docs (and CLAUDE.md, written before the download) said the SDK was an `.aar`. It is two plain jars:
+- Docs (and my plan, written before the download) said the SDK was an `.aar`. It is two plain jars:
   `spenremote-v1.0.1.jar` (dated 2019, 25 classes, the whole API) and `sdk-v1.0.0.jar` (2013, three classes,
   Samsung's vendor check). No resources, no manifest, so Gradle takes them as a `fileTree("libs")` dependency.
   API surface from `javap`: `SpenRemote.getInstance().connect(ctx, cb)` hands back a `SpenUnitManager`;

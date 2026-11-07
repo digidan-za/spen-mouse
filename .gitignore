@@ -14,9 +14,12 @@ windows/bin/
 windows/obj/
 *.user
 
-# Samsung SDK binary: download it yourself, see CLAUDE.md
+# Samsung SDK binary: download it yourself, see README.md
 android/app/libs/*.aar
 android/app/libs/*.jar
 
 # Media is kept, but not raw multi-GB recordings
 media/raw/
+
+# Local working notes
+CLAUDE.md
