@@ -19,3 +19,10 @@ Tested on the laptop: motion works, the circle shows up on screen. The click pat
 - CLAUDE.md said ".NET 8 SDK". The laptop only has the .NET 11 RC SDK installed, with .NET 8 runtimes next
   to it. The 11 SDK builds a net8.0 target fine, so it didn't matter, but `dotnet --version` alone would have
   said "wrong SDK".
+
+- Docs (and CLAUDE.md, written before the download) said the SDK was an `.aar`. It is two plain jars:
+  `spenremote-v1.0.1.jar` (dated 2019, 25 classes, the whole API) and `sdk-v1.0.0.jar` (2013, three classes,
+  Samsung's vendor check). No resources, no manifest, so Gradle takes them as a `fileTree("libs")` dependency.
+  API surface from `javap`: `SpenRemote.getInstance().connect(ctx, cb)` hands back a `SpenUnitManager`;
+  `getUnit(SpenUnit.TYPE_AIR_MOTION)` / `TYPE_BUTTON`, then `registerSpenEventListener(listener, unit)`.
+  Events arrive as `SpenEvent`; wrap with `AirMotionEvent(e).getDeltaX()/getDeltaY()` or `ButtonEvent(e).getAction()`.
