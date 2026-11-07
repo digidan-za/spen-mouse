@@ -1,0 +1,21 @@
+# Android
+android/build/
+android/app/build/
+android/.gradle/
+android/.idea/
+android/local.properties
+android/*.iml
+android/app/*.iml
+*.apk
+*.aab
+
+# .NET
+windows/bin/
+windows/obj/
+*.user
+
+# Samsung SDK binary: download it yourself, see CLAUDE.md
+android/app/libs/*.aar
+
+# Media is kept, but not raw multi-GB recordings
+media/raw/
