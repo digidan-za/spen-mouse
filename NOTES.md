@@ -125,3 +125,7 @@ right). The pen's radio is still reconnecting for a few seconds after it leaves 
 on and nothing has arrived for two seconds, register again, up to three times per press. Diagnostics line
 (events per second, largest delta) was added to find this and removed again before release.
 Also noted for the README: the S25 Ultra's pen has no Bluetooth, so the S24 Ultra is the last phone this works on.
+
+## 2026-11-10: tagging the small one
+
+Tagged 3b04c9c as v0.1.0 and built it from a worktree: 81 lines of C#, 96 of Kotlin, the version that first moved the cursor the right way at the right speed. Console receiver published self-contained (35 MB, half of the tray app), APK signed with the same key as v0.2.1 via Gradle's `-Pandroid.injected.signing.*` properties, since that build file had no signing config. It is a draft release for reading, not installing; the pen still hung up after a minute in that version.

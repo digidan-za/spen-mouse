@@ -57,6 +57,8 @@ Type the laptop's IP into the box, hold the pen button, wave. The phone and lapt
 
 A release build is signed with `android/keystore.properties` and the keystore it names, both git-ignored; without them you get a debug build, which installs fine.
 
+If you want to see how little this takes, [v0.1.0](https://github.com/digidan-za/spen-mouse/releases/tag/v0.1.0) is the first version that moved the cursor: 81 lines of C# and 96 of Kotlin, a console window and an IP box. Everything since is about the pen's radio going to sleep and making it installable.
+
 ## Things that bit
 
 - **Works up to the S24 Ultra only.** From the S25 Ultra on, Samsung removed Bluetooth from the S Pen. No Bluetooth, no button events and no gyro stream, so no air mouse.
