@@ -1,6 +1,6 @@
 # spen-mouse
 
-An air mouse for Windows, powered by the Galaxy S Pen. Hold the button, wave the pen, the cursor follows. Tap the button to click.
+An air mouse for Windows, powered by the Galaxy S Pen. Press the button, wave the pen, the cursor follows. Tap the button to click. Works with any Galaxy whose S Pen has Bluetooth, up to the S24 Ultra.
 
 Inspired by [AirPointer](https://github.com/musubipapi/airpointer), which did this with a closed AirPods case and a lot of reverse engineering. The S Pen version is easier: Samsung publishes an [SDK](https://developer.samsung.com/galaxy-spen-remote/s-pen-remote-sdk.html) that streams the pen's motion to the phone.
 
