@@ -45,16 +45,26 @@ class MainActivity : AppCompatActivity() {
     @Volatile private var lastEvent = 0L
     @Volatile private var lastMotion = 0L
     private val ui = Handler(Looper.getMainLooper())
-    private val IdleMs = 8000L   // after this long with the button up, stop the gyro stream (re-arming costs ~1 s)
+    // The SDK streams motion whether or not the button is held, so the button is not a clutch: a press wakes the pen,
+    // and the stream stops by itself once the pen has been still for a while. Hand tremor stays under the threshold.
+    private val StillMs = 5000L    // no real movement for this long: let the gyro sleep
+    private val RearmMs = 30000L   // the pen hung up after ~1 min of continuous streaming; a quick off/on (~60 ms) avoids that
+    private val Still = 0.01f      // deltas below this are tremor, not movement
     private var motionOn = false
-    private val motionOff = Runnable { motion(false) }
+    @Volatile private var lastMove = 0L   // last motion above the tremor threshold
+    private var motionSince = 0L
     private val ticker = object : Runnable {   // honest status: the SDK binding stays "connected" even when the pen's radio has gone to sleep
         override fun run() {
             val now = System.currentTimeMillis()
+            if (motionOn) {
+                if (now - lastMove > StillMs) motion(false)
+                else if (now - motionSince > RearmMs) { motion(false); motion(true) }
+            }
             if (lastEvent > 0) {
                 val age = (now - lastEvent) / 1000
-                val hint = "Pen gone quiet? Press its button once. Still dead: dock it and pull it out again."
-                status.text = "$sent packets sent. Last pen event ${age}s ago." + (if (age > 5) " $hint" else "")
+                val state = if (motionOn) "Pen active" else "Pen asleep. Press its button to wake it"
+                val hint = if (motionOn && age > 5) " Nothing arriving: press the button again, or dock the pen for a few seconds and pull it out." else ""
+                status.text = "$state. $sent packets sent, last pen event ${age}s ago.$hint"
             }
             if (laptops.values.removeAll { now - it.second > 5000 }) showLaptops()   // beacon stopped: laptop went away
             ui.postDelayed(this, 1000)
@@ -155,14 +165,13 @@ class MainActivity : AppCompatActivity() {
                 manager.registerSpenEventListener(SpenEventListener { e ->
                     val down = ButtonEvent(e).action == ButtonEvent.ACTION_DOWN
                     lastEvent = System.currentTimeMillis(); Log.d("spen-mouse", if (down) "button down" else "button up")
-                    ui.removeCallbacks(motionOff)
-                    // Docking the pen resets its mode under us; a stale registration then delivers nothing. Re-arm if quiet.
-                    if (down) ui.post { if (motionOn && System.currentTimeMillis() - lastMotion > IdleMs) motion(false); motion(true) }
-                    else ui.postDelayed(motionOff, IdleMs)
+                    // Any press wakes the pen. If it is supposedly streaming but nothing has arrived for a while, the
+                    // registration is stale (docking the pen resets its mode under us): drop it and register again.
+                    if (down) ui.post { if (motionOn && System.currentTimeMillis() - lastMotion > 3000) motion(false); motion(true) }
                     send(if (down) "B down" else "B up")
                 }, manager.getUnit(SpenUnit.TYPE_BUTTON))
-                motion(true); ui.postDelayed(motionOff, IdleMs)
-                show("Pen connected. Hold the button and wave; tap it to click.")
+                motion(true)
+                show("Pen connected. Press its button once to wake it, then move; tap the button to click.")
             }
             override fun onFailure(code: Int) = show("Pen connect failed, code $code")
         })
@@ -174,8 +183,10 @@ class MainActivity : AppCompatActivity() {
         val m = units ?: return
         if (on == motionOn) return
         motionOn = on
+        if (on) motionSince = System.currentTimeMillis().also { lastMove = it; lastMotion = it }
         if (on) m.registerSpenEventListener(SpenEventListener { e ->
             val a = AirMotionEvent(e); lastEvent = System.currentTimeMillis(); lastMotion = lastEvent
+            if (Math.abs(a.deltaX) > Still || Math.abs(a.deltaY) > Still) lastMove = lastEvent
             send(String.format(Locale.US, "M %.4f %.4f", a.deltaX, a.deltaY))   // Locale.US: no decimal commas
         }, m.getUnit(SpenUnit.TYPE_AIR_MOTION))
         else m.unregisterSpenEventListener(m.getUnit(SpenUnit.TYPE_AIR_MOTION))
@@ -184,7 +195,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        ui.removeCallbacks(ticker); ui.removeCallbacks(motionOff); ui.removeCallbacks(prober)
+        ui.removeCallbacks(ticker); ui.removeCallbacks(prober)
         discovery?.close(); discovery = null
         multicast?.release(); multicast = null
         motion(false)

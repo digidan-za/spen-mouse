@@ -7,7 +7,7 @@ sealed class MainForm : Form
     readonly Label nameLabel = new(), ipLabel = new(), statusLabel = new(), gainValue = new(), smoothValue = new();
     readonly Panel dot = new();
     readonly TrackBar gainBar = new(), smoothBar = new();
-    readonly CheckBox flipBox = new(), startupBox = new();
+    readonly CheckBox flipBox = new(), holdBox = new(), startupBox = new();
     bool allowVisible, reallyClose;
     int tick;
 
@@ -44,12 +44,15 @@ sealed class MainForm : Form
 
         flipBox.Text = "Flip vertical (pen up moves the cursor up)"; flipBox.AutoSize = true; flipBox.Checked = cfg.FlipY;
         flipBox.CheckedChanged += (_, _) => { rx.FlipY = cfg.FlipY = flipBox.Checked; cfg.Save(); };
+        holdBox.Text = "Move only while the pen button is held"; holdBox.AutoSize = true; holdBox.Checked = cfg.HoldToMove;
+        holdBox.CheckedChanged += (_, _) => { rx.HoldToMove = cfg.HoldToMove = holdBox.Checked; cfg.Save(); };
         startupBox.Text = "Start with Windows, in the tray"; startupBox.AutoSize = true; startupBox.Checked = cfg.StartWithWindows;
         startupBox.CheckedChanged += (_, _) => { cfg.StartWithWindows = startupBox.Checked; cfg.Save(); cfg.ApplyStartup(); };
-        col.Controls.Add(flipBox); col.Controls.Add(startupBox);
+        col.Controls.Add(flipBox); col.Controls.Add(holdBox); col.Controls.Add(startupBox);
 
-        col.Controls.Add(Text_("Hold the pen button to move, tap it to click, let go to reposition your arm.\n" +
-            "Closing this window keeps spen-mouse running in the tray. If Windows asks about the firewall, allow it.", w, FontStyle.Regular, 9, Color.DimGray, new Padding(0, 16, 0, 0)));
+        col.Controls.Add(Text_("Press the pen button once to wake the pen, then move it; tap the button to click. The pen goes back to sleep " +
+            "after a few seconds of holding still. Closing this window keeps spen-mouse running in the tray. If Windows asks about the firewall, allow it.",
+            w, FontStyle.Regular, 9, Color.DimGray, new Padding(0, 16, 0, 0)));
 
         var menu = new ContextMenuStrip();
         menu.Items.Add("Open", null, (_, _) => Restore());
@@ -57,7 +60,7 @@ sealed class MainForm : Form
         tray = new NotifyIcon { Icon = Icon, Text = "spen-mouse", Visible = true, ContextMenuStrip = menu };
         tray.DoubleClick += (_, _) => Restore();
 
-        rx.Gain = cfg.Gain; rx.Smooth = cfg.Smooth; rx.FlipY = cfg.FlipY;
+        rx.Gain = cfg.Gain; rx.Smooth = cfg.Smooth; rx.FlipY = cfg.FlipY; rx.HoldToMove = cfg.HoldToMove;
         rx.Start(); Beacon.Start();
         RefreshAddresses();
         var timer = new System.Windows.Forms.Timer { Interval = 500 };

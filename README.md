@@ -6,7 +6,7 @@ Inspired by [AirPointer](https://github.com/musubipapi/airpointer), which did th
 
 Two parts: an Android app that forwards the pen's air-motion deltas and button presses over UDP, and a Windows tray app that turns them into cursor movement with `SendInput`. The receiver announces itself on the LAN, so the phone finds it without anyone typing an address.
 
-Status: works. Hold the pen button to move, tap it to click, release it to reposition your arm (the cursor stays put, like lifting a mouse).
+Status: works. Press the pen button once to wake the pen, then move it; tap the button to click. It goes back to sleep after a few seconds of holding still. Prefer a clutch? Tick "Move only while the pen button is held" in the receiver.
 
 <p>
 <img src="media/receiver.png" alt="The Windows receiver window" height="420">
@@ -29,7 +29,7 @@ Both devices must be on the same Wi-Fi. Phone hotspots often block laptop-to-pho
 1. Download `spen-mouse.apk` from the same release page, on the phone, and open it. Allow installs from your browser if asked.
 2. Open spen-mouse. Allow "local network access" when asked; without it the app cannot reach the laptop.
 3. Your laptop appears in the list within a few seconds. Tap it if there is more than one.
-4. Pull the pen out, hold its button and wave. Tap the button to click.
+4. Pull the pen out, press its button once, and wave. Tap the button to click. After a few seconds of holding still the pen sleeps; press the button to wake it.
 
 If the laptop never appears, type the address the receiver window shows. If the pen goes quiet, press its button once; if it stays dead, dock the pen for a few seconds and pull it out again.
 
@@ -60,7 +60,8 @@ A release build is signed with `android/keystore.properties` and the keystore it
 ## Things that bit
 
 - **Android 16+ blocks LAN traffic** until the app holds the `ACCESS_LOCAL_NETWORK` runtime permission. Accept the prompt on first launch, or every packet silently fails.
-- **The pen hangs up after a minute** if an app keeps the SDK's air-motion listener registered: that puts the pen's gyro in always-on mode and drains it. This app registers for motion only while the button is in use. Docking the pen resets its mode; one button press re-arms it.
+- **The pen hangs up after a minute** if an app keeps the SDK's air-motion listener registered: that puts the pen's gyro in always-on mode. This app streams only while the pen is actually moving, re-registers every 30 seconds while in use, and stops after a few seconds of stillness. Docking the pen resets its mode; one button press re-arms it.
+- **The SDK streams motion whether or not the button is held.** The button is not a clutch unless the receiver is told to treat it as one (the "Move only while the pen button is held" checkbox).
 - **Discovery needs laptop-to-phone traffic.** The receiver broadcasts a beacon and also answers direct probes, but a phone hotspot that isolates its clients blocks both. Manual address entry still works there, because phone-to-laptop traffic usually does.
 - **Decimal commas.** The protocol is text, so both ends format and parse with an invariant locale.
 

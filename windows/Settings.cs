@@ -6,6 +6,7 @@ sealed class Settings
     public float Gain { get; set; } = 400;
     public float Smooth { get; set; } = 0.5f;
     public bool FlipY { get; set; } = true;
+    public bool HoldToMove { get; set; }
     public bool StartWithWindows { get; set; }
 
     static readonly string Path = System.IO.Path.Combine(

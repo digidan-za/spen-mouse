@@ -104,3 +104,15 @@ downloadable builds on GitHub Releases.
 - The receiver listed a WSL virtual adapter (172.22.176.1) as an alternative address. Filtered to Wi-Fi and
   Ethernet, excluding vEthernet and anything described as Virtual.
 - Release APK signed with a local keystore, git-ignored. Debug builds still work for anyone who forks.
+
+## 2026-11-09: the button was never a clutch
+Danyal, after a day of real use: "I click once, I get about 8 seconds of movement, then it stops and I click
+again." That is the 8-second idle timer, not a clutch. The SDK streams air motion whether or not the button is
+held; the Samsung docs' "while the button is pressed" describes their own Air actions, not the SDK stream.
+"Sure and wrong" #5, and it survived two days because the timer happened to produce a usable rhythm.
+- New default: a press wakes the pen; the stream stays on while the pen is moving (deltas above 0.01, hand
+  tremor is below that) and stops after 5 s of stillness. While in use the app drops and re-registers the
+  motion listener every 30 s, since the hangups came after about a minute of continuous streaming and
+  Samsung applies the toggle in ~60 ms.
+- Danyal's idea: make it a choice on the laptop. The receiver got a "Move only while the pen button is held"
+  checkbox; when ticked it ignores motion while the button is up. The phone streams the same way either way.

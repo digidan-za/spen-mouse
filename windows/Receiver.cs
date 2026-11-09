@@ -13,6 +13,7 @@ sealed class Receiver
     public volatile float Gain = 400;      // px per unit of delta; a full arm sweep is only ~0.1 units
     public volatile float Smooth = 0.5f;   // 0 = raw, 0.9 = very laggy
     public volatile bool FlipY = true;     // pen up is +dy, screen up is -y
+    public volatile bool HoldToMove;       // true: cursor moves only while the button is held (a clutch); false: a press wakes the pen, then move freely
     public const int ClickMs = 250;        // button held shorter than this = click
 
     public long Packets;
@@ -42,6 +43,7 @@ sealed class Receiver
                     && double.TryParse(p[1], NumberStyles.Float, ci, out var dx)
                     && double.TryParse(p[2], NumberStyles.Float, ci, out var dy))
                 {
+                    if (HoldToMove && !down) continue;
                     double s = Smooth;
                     fx = s * fx + (1 - s) * dx;
                     fy = s * fy + (1 - s) * (FlipY ? -dy : dy);
