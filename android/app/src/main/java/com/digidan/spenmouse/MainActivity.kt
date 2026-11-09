@@ -53,11 +53,15 @@ class MainActivity : AppCompatActivity() {
     private var motionOn = false
     @Volatile private var lastMove = 0L   // last motion above the tremor threshold
     private var motionSince = 0L
+    private var rearms = 0   // silent-stream retries since the last button press
     private val ticker = object : Runnable {   // honest status: the SDK binding stays "connected" even when the pen's radio has gone to sleep
         override fun run() {
             val now = System.currentTimeMillis()
             if (motionOn) {
-                if (now - lastMove > StillMs) motion(false)
+                // Switched on but nothing arrives (typical right after undocking: the pen's radio is still reconnecting):
+                // register again rather than wait for the user to press once more. Give up after three tries.
+                if (lastMotion < motionSince && now - motionSince > 2000 && rearms < 3) { rearms++; motion(false); motion(true) }
+                else if (now - lastMove > StillMs) motion(false)
                 else if (now - motionSince > RearmMs) { motion(false); motion(true) }
             }
             if (lastEvent > 0) {
@@ -167,7 +171,7 @@ class MainActivity : AppCompatActivity() {
                     lastEvent = System.currentTimeMillis(); Log.d("spen-mouse", if (down) "button down" else "button up")
                     // Any press wakes the pen. If it is supposedly streaming but nothing has arrived for a while, the
                     // registration is stale (docking the pen resets its mode under us): drop it and register again.
-                    if (down) ui.post { if (motionOn && System.currentTimeMillis() - lastMotion > 3000) motion(false); motion(true) }
+                    if (down) ui.post { rearms = 0; if (motionOn && System.currentTimeMillis() - lastMotion > 3000) motion(false); motion(true) }
                     send(if (down) "B down" else "B up")
                 }, manager.getUnit(SpenUnit.TYPE_BUTTON))
                 motion(true)
@@ -183,10 +187,10 @@ class MainActivity : AppCompatActivity() {
         val m = units ?: return
         if (on == motionOn) return
         motionOn = on
-        if (on) motionSince = System.currentTimeMillis().also { lastMove = it; lastMotion = it }
+        if (on) motionSince = System.currentTimeMillis().also { lastMove = it }   // lastMotion only moves on real events
         if (on) m.registerSpenEventListener(SpenEventListener { e ->
             val a = AirMotionEvent(e); lastEvent = System.currentTimeMillis(); lastMotion = lastEvent
-            if (Math.abs(a.deltaX) > Still || Math.abs(a.deltaY) > Still) lastMove = lastEvent
+            if (Math.max(Math.abs(a.deltaX), Math.abs(a.deltaY)) > Still) lastMove = lastEvent
             send(String.format(Locale.US, "M %.4f %.4f", a.deltaX, a.deltaY))   // Locale.US: no decimal commas
         }, m.getUnit(SpenUnit.TYPE_AIR_MOTION))
         else m.unregisterSpenEventListener(m.getUnit(SpenUnit.TYPE_AIR_MOTION))

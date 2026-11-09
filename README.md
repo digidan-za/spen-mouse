@@ -24,7 +24,7 @@ Both devices must be on the same Wi-Fi. Phone hotspots often block laptop-to-pho
 3. When Windows Firewall asks, click "Allow". The app needs to receive on the network.
 4. Close the window when you like; spen-mouse keeps running in the tray. Tick "Start with Windows" if you want it there always.
 
-**On the phone** (Galaxy with an S Pen that supports Air actions: Note 10 and later, S22 Ultra and later)
+**On the phone** (a Galaxy whose S Pen has Bluetooth: Note 10 through Note 20, S22 Ultra, S23 Ultra, S24 Ultra. The S25 Ultra's pen lost Bluetooth, so nothing pen-remote works there, this included.)
 
 1. Download `spen-mouse.apk` from the same release page, on the phone, and open it. Allow installs from your browser if asked.
 2. Open spen-mouse. Allow "local network access" when asked; without it the app cannot reach the laptop.
@@ -58,6 +58,8 @@ Type the laptop's IP into the box, hold the pen button, wave. The phone and lapt
 A release build is signed with `android/keystore.properties` and the keystore it names, both git-ignored; without them you get a debug build, which installs fine.
 
 ## Things that bit
+
+- **Works up to the S24 Ultra only.** From the S25 Ultra on, Samsung removed Bluetooth from the S Pen. No Bluetooth, no button events and no gyro stream, so no air mouse.
 
 - **Android 16+ blocks LAN traffic** until the app holds the `ACCESS_LOCAL_NETWORK` runtime permission. Accept the prompt on first launch, or every packet silently fails.
 - **The pen hangs up after a minute** if an app keeps the SDK's air-motion listener registered: that puts the pen's gyro in always-on mode. This app streams only while the pen is actually moving, re-registers every 30 seconds while in use, and stops after a few seconds of stillness. Docking the pen resets its mode; one button press re-arms it.

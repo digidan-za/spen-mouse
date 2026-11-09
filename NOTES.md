@@ -116,3 +116,12 @@ held; the Samsung docs' "while the button is pressed" describes their own Air ac
   Samsung applies the toggle in ~60 ms.
 - Danyal's idea: make it a choice on the laptop. The receiver got a "Move only while the pen button is held"
   checkbox; when ticked it ignores motion while the button is up. The phone streams the same way either way.
+
+## 2026-11-09, later: first press after undocking is a dud
+Danyal: "it isn't working anymore". The log: his first press after pulling the pen out switched the stream on,
+zero events arrived for five seconds, the stillness rule put it back to sleep; his second press worked and the
+numbers were healthy (23 events/s, deltas 0.06-0.47 moving, 0.004 at rest, so the 0.01 tremor threshold is
+right). The pen's radio is still reconnecting for a few seconds after it leaves the dock. Fix: if the stream is
+on and nothing has arrived for two seconds, register again, up to three times per press. Diagnostics line
+(events per second, largest delta) was added to find this and removed again before release.
+Also noted for the README: the S25 Ultra's pen has no Bluetooth, so the S24 Ultra is the last phone this works on.
